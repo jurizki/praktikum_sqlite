@@ -1,45 +1,42 @@
 import 'package:flutter/material.dart';
-import 'package:sqlite/tambah_saham.dart';
-import 'sqlite_service.dart';
 import 'package:sqlite/models/saham.dart';
+import 'package:sqlite/sqlite_service.dart';
 
-void main() {
-  runApp(const MyApp());
-}
+class TambahSaham extends StatefulWidget {
+  const TambahSaham({super.key, required this.onPressed});
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  // This widget is the root of your application.
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  final String title;
+  final void Function() onPressed;
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<TambahSaham> createState() => _TambahSahamState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _TambahSahamState extends State<TambahSaham> {
   late DatabaseHandler handler;
 
-  @override
-  void initState() {
-    super.initState();
+  final _formKey = GlobalKey<FormState>();
 
+  // Create a text controller. Later, use it to retrieve the
+  // current value of the TextField.
+  final tickerController = TextEditingController();
+  final openController = TextEditingController();
+  final highController = TextEditingController();
+  final lastController = TextEditingController();
+  final changeController = TextEditingController();
+
+  @override
+  void dispose() {
+    // Clean up the controller when the widget is removed from the
+    // widget tree.
+    tickerController.dispose();
+    openController.dispose();
+    highController.dispose();
+    lastController.dispose();
+    changeController.dispose();
+    super.dispose();
+  }
+
+  void tambahSaham() {
     handler = DatabaseHandler();
     handler.initializeDB().whenComplete(() async {
       await addSaham();
@@ -48,106 +45,122 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<int> addSaham() async {
-    List<Saham> listOfUsers = [
-      Saham(ticker: "TLKM", open: 3380, high: 3500, last: 3490, change: "2,05"),
-      Saham(ticker: "AMMN", open: 6750, high: 6750, last: 6500, change: "-3,7"),
-      Saham(ticker: "BREN", open: 4500, high: 4610, last: 4580, change: "1,78"),
-      Saham(ticker: "CUAN", open: 5200, high: 5525, last: 5400, change: "3,85"),
+    List<Saham> listSaham = [
+      Saham(
+          ticker: tickerController.text,
+          open: int.parse(openController.text),
+          high: int.parse(highController.text),
+          last: int.parse(lastController.text),
+          change: changeController.text),
     ];
 
-    return await handler.insertSaham(listOfUsers);
-  }
-
-  void loadUlang() {
-    setState(() {});
-  }
-
-  bool cekChange(String change) {
-    change = change.replaceAll(",", ".");
-    double changeDouble = double.parse(change);
-
-    if (changeDouble > 0) {
-      return true;
-    } else {
-      return false;
-    }
+    return await handler.insertSaham(listSaham);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
+        title: const Text('Tambah Saham'),
       ),
-      body: FutureBuilder(
-        future: handler.retrieveSaham(),
-        builder: (BuildContext context, AsyncSnapshot<List<Saham>> snapshot) {
-          if (snapshot.hasData) {
-            return ListView.builder(
-              itemCount: snapshot.data?.length,
-              itemBuilder: (BuildContext context, int index) {
-                return Dismissible(
-                  
-                  direction: DismissDirection.endToStart,
-                  background: Container(
-                    color: Colors.red,
-                    alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                    child: const Icon(Icons.delete_forever),
-                  ),
-                  key: ValueKey<int>(snapshot.data![index].tickerid!),
-                  child: Card(
-                    child: ListTile(
-                        contentPadding: const EdgeInsets.all(8.0),
-                        title: Text(snapshot.data![index].ticker, style: TextStyle(color: cekChange(snapshot.data![index].change) ? Colors.green : Colors.red)),
-                        subtitle: Column(
-                          children: [
-                            Row(
-                              children: [
-                                const Text("Open: "),
-                                Text(snapshot.data![index].open.toString()),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                const Text("High: "),
-                                Text(snapshot.data![index].high.toString()),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                const Text("Last: "),
-                                Text(snapshot.data![index].last.toString()),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                const Text("Change: "),
-                                Text(snapshot.data![index].change),
-                              ],
-                            ),
-                          ],
-                        )),
-                  ),
-                );
-              },
-            );
-          } else {
-            return const Center(child: CircularProgressIndicator());
-          }
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => TambahSaham(onPressed: loadUlang)),
-          );
-        },
-        tooltip: 'Increment Counter',
-        child: const Icon(Icons.add),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              Text("Ticker"),
+              TextFormField(
+                controller: tickerController,
+                decoration: const InputDecoration(
+                  hintText: 'Ticker',
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter some text';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 20),
+              Text("Open"),
+              TextFormField(
+                controller: openController,
+                decoration: const InputDecoration(
+                  hintText: 'Open',
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter some text';
+                  } else if (int.tryParse(value) == null) {
+                    return 'Please enter a number';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 20),
+              Text("High"),
+              TextFormField(
+                controller: highController,
+                decoration: const InputDecoration(
+                  hintText: 'High',
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter some text';
+                  } else if (int.tryParse(value) == null) {
+                    return 'Please enter a number';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 20),
+              Text("Last"),
+              TextFormField(
+                controller: lastController,
+                decoration: const InputDecoration(
+                  hintText: 'Last',
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter some text';
+                  } else if (int.tryParse(value) == null) {
+                    return 'Please enter a number';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 20),
+              Text("Change"),
+              TextFormField(
+                controller: changeController,
+                decoration: const InputDecoration(
+                  hintText: 'Change',
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter some text';
+                  } else
+                    return null;
+                },
+              ),
+              SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  if (_formKey.currentState!.validate()) {
+                    tambahSaham();
+                    widget.onPressed();
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Data saham berhasil disimpan')),
+                    );
+                  }
+                },
+                child: const Text('Submit'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
