@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sqlite/tambah_saham.dart';
 import 'sqlite_service.dart';
 import 'package:sqlite/models/saham.dart';
 
@@ -9,15 +10,16 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
+  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'NYAHAM',
+      title: 'Flutter Demo',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'SAHAMS'),
+      home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }
@@ -33,33 +35,42 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   late DatabaseHandler handler;
-  final _formKey = GlobalKey<FormState>();
-  final TextEditingController _tickerController = TextEditingController();
-  final TextEditingController _openController = TextEditingController();
-  final TextEditingController _highController = TextEditingController();
-  final TextEditingController _lastController = TextEditingController();
-  final TextEditingController _changeController = TextEditingController();
-
-  Future<int> addSahams() async {
-    Saham tlkm = Saham(ticker: "TLKM", open: 3380, high: 3500, last: 3490, change: "2,05");
-    Saham ammn = Saham(ticker: "AMMN", open: 6750, high: 6750, last: 6500, change: "-3,7");
-    Saham bren = Saham(ticker: "BREN", open: 4500, high: 4610, last: 4580, change: "1,78");
-    Saham cuan = Saham(ticker: "CUAN", open: 5200, high: 5525, last: 5400, change: "3,85");
-
-    List<Saham> listOfSahams = [tlkm, ammn, bren, cuan];
-
-    return await this.handler.insertSaham(listOfSahams);
-  }
 
   @override
   void initState() {
     super.initState();
 
-    this.handler = DatabaseHandler();
-    this.handler.initializeDB().whenComplete(() async {
-      await this.addSahams();
+    handler = DatabaseHandler();
+    handler.initializeDB().whenComplete(() async {
+      await addSaham();
       setState(() {});
     });
+  }
+
+  Future<int> addSaham() async {
+    List<Saham> listOfUsers = [
+      Saham(ticker: "TLKM", open: 3380, high: 3500, last: 3490, change: "2,05"),
+      Saham(ticker: "AMMN", open: 6750, high: 6750, last: 6500, change: "-3,7"),
+      Saham(ticker: "BREN", open: 4500, high: 4610, last: 4580, change: "1,78"),
+      Saham(ticker: "CUAN", open: 5200, high: 5525, last: 5400, change: "3,85"),
+    ];
+
+    return await handler.insertSaham(listOfUsers);
+  }
+
+  void loadUlang() {
+    setState(() {});
+  }
+
+  bool cekChange(String change) {
+    change = change.replaceAll(",", ".");
+    double changeDouble = double.parse(change);
+
+    if (changeDouble > 0) {
+      return true;
+    } else {
+      return false;
+    }
   }
 
   @override
@@ -69,118 +80,74 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  TextFormField(
-                    controller: _tickerController,
-                    decoration: InputDecoration(labelText: 'Ticker'),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter the ticker';
-                      }
-                      return null;
-                    },
+      body: FutureBuilder(
+        future: handler.retrieveSaham(),
+        builder: (BuildContext context, AsyncSnapshot<List<Saham>> snapshot) {
+          if (snapshot.hasData) {
+            return ListView.builder(
+              itemCount: snapshot.data?.length,
+              itemBuilder: (BuildContext context, int index) {
+                return Dismissible(
+                  
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    color: Colors.red,
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                    child: const Icon(Icons.delete_forever),
                   ),
-                  TextFormField(
-                    controller: _openController,
-                    decoration: InputDecoration(labelText: 'Open'),
-                    keyboardType: TextInputType.number,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter the open value';
-                      }
-                      return null;
-                    },
+                  key: ValueKey<int>(snapshot.data![index].tickerid!),
+                  child: Card(
+                    child: ListTile(
+                        contentPadding: const EdgeInsets.all(8.0),
+                        title: Text(snapshot.data![index].ticker, style: TextStyle(color: cekChange(snapshot.data![index].change) ? Colors.green : Colors.red)),
+                        subtitle: Column(
+                          children: [
+                            Row(
+                              children: [
+                                const Text("Open: "),
+                                Text(snapshot.data![index].open.toString()),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                const Text("High: "),
+                                Text(snapshot.data![index].high.toString()),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                const Text("Last: "),
+                                Text(snapshot.data![index].last.toString()),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                const Text("Change: "),
+                                Text(snapshot.data![index].change),
+                              ],
+                            ),
+                          ],
+                        )),
                   ),
-                  TextFormField(
-                    controller: _highController,
-                    decoration: InputDecoration(labelText: 'High'),
-                    keyboardType: TextInputType.number,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter the high value';
-                      }
-                      return null;
-                    },
-                  ),
-                  TextFormField(
-                    controller: _lastController,
-                    decoration: InputDecoration(labelText: 'Last'),
-                    keyboardType: TextInputType.number,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter the last value';
-                      }
-                      return null;
-                    },
-                  ),
-                  TextFormField(
-                    controller: _changeController,
-                    decoration: InputDecoration(labelText: 'Change'),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter the change value';
-                      }
-                      return null;
-                    },
-                  ),
-                  // Repeat for high, last, and change fields...
-                  ElevatedButton(
-                    onPressed: () async {
-                      if (_formKey.currentState!.validate()) {
-                        // Create new saham object and save to DB
-                        Saham newSaham = Saham(
-                          ticker: _tickerController.text,
-                          open: int.parse(_openController.text),
-                          high: int.parse(_highController.text),
-                          last: int.parse(_lastController.text),
-                          change: _changeController.text,
-                        );
-                        await handler.insertSaham(newSaham);
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Data saham berhasil disimpan')));
-                        setState(() {});
-                      }
-                    },
-                    child: Text('Submit'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Expanded(
-            child: FutureBuilder<List<Saham>>(
-              future: handler.retrieveSahams(),
-              builder: (BuildContext context, AsyncSnapshot<List<Saham>> snapshot) {
-                if (snapshot.hasData) {
-                  return ListView.builder(
-                    itemCount: snapshot.data?.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      Saham saham = snapshot.data![index];
-                      return ListTile(
-                        title: Text('${saham.ticker}'),
-                        subtitle: Text('Open: ${saham.open}, High: ${saham.high}, Last: ${saham.last}'),
-                        trailing: Text(
-                          'Change: ${saham.change}',
-                          style: TextStyle(
-                            color: saham.change?.startsWith('-') ?? false ? Colors.red : Colors.green,
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                } else {
-                  return Center(child: CircularProgressIndicator());
-                }
+                );
               },
-            ),
-          ),
-        ],
+            );
+          } else {
+            return const Center(child: CircularProgressIndicator());
+          }
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => TambahSaham(onPressed: loadUlang)),
+          );
+        },
+        tooltip: 'Increment Counter',
+        child: const Icon(Icons.add),
       ),
     );
   }
